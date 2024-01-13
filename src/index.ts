@@ -9,12 +9,7 @@ export default {
 		const resp = await fetch(`${albumUrl}?_imcp=1`, { redirect: 'follow' });
 		const text = await resp.text();
 
-		let matches;
-		try {
-			matches = [...text.matchAll(/"https:\/\/lh3\.googleusercontent\.com\/pw\/[/a-zA-Z0-9_-]+"/g)];
-		} catch (e) {
-			console.log('Error', e);
-		}
+		const matches = [...text.matchAll(/"https:\/\/lh3\.googleusercontent\.com\/pw\/[/a-zA-Z0-9_-]+"/g)];
 
 		const deduplicated = new Set(matches?.map(([url]) => url.replaceAll('"', '')));
 		return jsonResponse({ images: [...deduplicated] }, { status: 200 });
