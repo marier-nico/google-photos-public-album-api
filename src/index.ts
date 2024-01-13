@@ -1,32 +1,29 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface Env {
-	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-	// MY_KV_NAMESPACE: KVNamespace;
-	//
-	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-	// MY_DURABLE_OBJECT: DurableObjectNamespace;
-	//
-	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-	// MY_BUCKET: R2Bucket;
-	//
-	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
-	// MY_SERVICE: Fetcher;
-	//
-	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
-	// MY_QUEUE: Queue;
+	ALBUM_URL: string;
 }
 
 export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		return new Response('Hello World!');
+	async fetch(_request: Request, env: Env): Promise<Response> {
+		const albumUrl = env.ALBUM_URL.trim();
+		const resp = await fetch(`${albumUrl}?_imcp=1`, { redirect: 'follow' });
+		const text = await resp.text();
+
+		let matches;
+		try {
+			matches = [...text.matchAll(/"https:\/\/lh3\.googleusercontent\.com\/pw\/[/a-zA-Z0-9_-]+"/g)];
+		} catch (e) {
+			console.log('Error', e);
+		}
+
+		const deduplicated = new Set(matches?.map(([url]) => url.replaceAll('"', '')));
+		return jsonResponse({ images: [...deduplicated] }, { status: 200 });
 	},
+};
+
+const jsonResponse = (data: any, params: { status?: number }) => {
+	return new Response(JSON.stringify(data), {
+		status: params.status || 200,
+		headers: { 'content-type': 'application/json' },
+	});
 };
