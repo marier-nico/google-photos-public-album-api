@@ -13,6 +13,7 @@ Configuration is done through the worker environment.
 
 ```sh
 ALBUM_URL=https://photos.app.goo.gl/your-id
+ALLOW_ORIGIN=https://example.com
 ```
 
 ## Deploy

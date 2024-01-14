@@ -27,10 +27,21 @@ const handleGet = async (env: Env): Promise<Response> => {
 	const resp = await fetch(`${albumUrl}?_imcp=1`, { redirect: 'follow' });
 	const text = await resp.text();
 
-	const matches = [...text.matchAll(/"https:\/\/lh3\.googleusercontent\.com\/pw\/[/a-zA-Z0-9_-]+"/g)];
+	const matches = [
+		...text.matchAll(
+			/\["(https:\/\/lh3\.googleusercontent\.com\/pw\/[/a-zA-Z0-9_-]+)",(\d+),(\d+)[^\]]+\][^\]]+\]\],(\d+),[^,]+,[^,]+,(\d+)/g,
+		),
+	];
+	const images = matches.flatMap(([, url, width, height, createdTimestamp, updatedTimestamp]) => {
+		if (!url || !width || !height) {
+			return [];
+		}
 
-	const deduplicated = new Set(matches?.map(([url]) => url.replaceAll('"', '')));
-	return jsonResponse({ images: [...deduplicated] }, { status: 200, allowOrigin: env.ALLOW_ORIGIN });
+		return { url, width, height, createdTimestamp, updatedTimestamp };
+	});
+
+	const deduplicated = [...new Map(images.map((image) => [image.url, image])).values()];
+	return jsonResponse({ images: deduplicated, count: deduplicated.length }, { status: 200, allowOrigin: env.ALLOW_ORIGIN });
 };
 
 const jsonResponse = (data: any, params: { status?: number; allowOrigin?: string }) => {
