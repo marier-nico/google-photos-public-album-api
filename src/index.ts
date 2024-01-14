@@ -1,24 +1,54 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface Env {
-	ALBUM_URL: string;
+	ALBUM_URL?: string;
+	ALLOW_ORIGIN?: string;
 }
 
 export default {
-	async fetch(_request: Request, env: Env): Promise<Response> {
-		const albumUrl = env.ALBUM_URL.trim();
-		const resp = await fetch(`${albumUrl}?_imcp=1`, { redirect: 'follow' });
-		const text = await resp.text();
-
-		const matches = [...text.matchAll(/"https:\/\/lh3\.googleusercontent\.com\/pw\/[/a-zA-Z0-9_-]+"/g)];
-
-		const deduplicated = new Set(matches?.map(([url]) => url.replaceAll('"', '')));
-		return jsonResponse({ images: [...deduplicated] }, { status: 200 });
+	async fetch(request: Request, env: Env): Promise<Response> {
+		switch (request.method) {
+			case 'GET':
+				return handleGet(env);
+			case 'OPTIONS':
+				return handleOptions(env);
+			default:
+				return new Response(null, { status: 405 });
+		}
 	},
 };
 
-const jsonResponse = (data: any, params: { status?: number }) => {
+const handleGet = async (env: Env): Promise<Response> => {
+	const albumUrl = env.ALBUM_URL?.trim();
+
+	if (!albumUrl) {
+		return jsonResponse({ error: 'ALBUM_URL not set' }, { status: 500, allowOrigin: env.ALLOW_ORIGIN });
+	}
+
+	const resp = await fetch(`${albumUrl}?_imcp=1`, { redirect: 'follow' });
+	const text = await resp.text();
+
+	const matches = [...text.matchAll(/"https:\/\/lh3\.googleusercontent\.com\/pw\/[/a-zA-Z0-9_-]+"/g)];
+
+	const deduplicated = new Set(matches?.map(([url]) => url.replaceAll('"', '')));
+	return jsonResponse({ images: [...deduplicated] }, { status: 200, allowOrigin: env.ALLOW_ORIGIN });
+};
+
+const jsonResponse = (data: any, params: { status?: number; allowOrigin?: string }) => {
 	return new Response(JSON.stringify(data), {
 		status: params.status || 200,
-		headers: { 'content-type': 'application/json' },
+		headers: { 'content-type': 'application/json', 'Access-Control-Allow-Origin': params.allowOrigin || '*' },
+	});
+};
+
+const handleOptions = async (env: Env): Promise<Response> => {
+	return new Response(null, {
+		status: 204,
+		headers: {
+			Allow: 'GET, OPTIONS',
+			'Access-Control-Allow-Origin': env.ALLOW_ORIGIN || '*',
+			'Access-Control-Allow-Methods': 'GET, OPTIONS',
+			'Access-Control-Allow-Headers': 'Content-Type',
+			'Access-Control-Max-Age': '86400',
+		},
 	});
 };
