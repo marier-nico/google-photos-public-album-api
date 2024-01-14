@@ -14,3 +14,7 @@ Configuration is done through the worker environment.
 ```sh
 ALBUM_URL=https://photos.app.goo.gl/your-id
 ```
+
+## Deploy
+
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/marier-nico/google-photos-public-album-api)
