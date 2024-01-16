@@ -2,6 +2,7 @@
 export interface Env {
 	ALBUM_URL?: string;
 	ALLOW_ORIGIN?: string;
+	CACHE_CONTROL?: string;
 }
 
 export default {
@@ -41,13 +42,20 @@ const handleGet = async (env: Env): Promise<Response> => {
 	});
 
 	const deduplicated = [...new Map(images.map((image) => [image.url, image])).values()];
-	return jsonResponse({ images: deduplicated, count: deduplicated.length }, { status: 200, allowOrigin: env.ALLOW_ORIGIN });
+	return jsonResponse(
+		{ images: deduplicated, count: deduplicated.length },
+		{
+			status: 200,
+			allowOrigin: env.ALLOW_ORIGIN,
+			extraHeaders: { 'Cache-Control': env.CACHE_CONTROL || 'max-age=604800, stale-while-revalidate' },
+		},
+	);
 };
 
-const jsonResponse = (data: any, params: { status?: number; allowOrigin?: string }) => {
+const jsonResponse = (data: any, params: { status?: number; allowOrigin?: string; extraHeaders?: Record<string, string> }) => {
 	return new Response(JSON.stringify(data), {
 		status: params.status || 200,
-		headers: { 'content-type': 'application/json', 'Access-Control-Allow-Origin': params.allowOrigin || '*' },
+		headers: { 'content-type': 'application/json', 'Access-Control-Allow-Origin': params.allowOrigin || '*', ...params.extraHeaders },
 	});
 };
 
