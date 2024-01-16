@@ -38,7 +38,13 @@ const handleGet = async (env: Env): Promise<Response> => {
 			return [];
 		}
 
-		return { url, width, height, createdTimestamp, updatedTimestamp };
+		return {
+			url,
+			width: Number(width),
+			height: Number(height),
+			createdTimestamp: Number(createdTimestamp),
+			updatedTimestamp: Number(updatedTimestamp),
+		};
 	});
 
 	const deduplicated = [...new Map(images.map((image) => [image.url, image])).values()];
